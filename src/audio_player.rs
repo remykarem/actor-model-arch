@@ -1,7 +1,7 @@
 use std::io::Cursor;
 
 use actix::prelude::*;
-use rodio::{Decoder, OutputStream, Sink};
+use rodio::{Decoder, OutputStream, OutputStreamHandle, Sink};
 
 pub struct Audio(pub Vec<u8>);
 
@@ -10,23 +10,21 @@ impl Message for Audio {
 }
 
 pub struct AudioPlayerActor {
-    // stream_handle: OutputStreamHandle,
+    pub sink: Sink,
+    pub output_stream: OutputStream,
+    pub output_stream_handle: OutputStreamHandle,
 }
 
-impl AudioPlayerActor {
-    pub async fn default() -> Self {
-        // let sink = actix::spawn(async {
-        // Open the default audio output device
-        let (_stream, stream_handle) = OutputStream::try_default().unwrap();
-        let sink = Sink::try_new(&stream_handle).unwrap();
-        sink.pause();
-        //     sink
-        // })
-        // .await
-        // .unwrap();
+impl Default for AudioPlayerActor {
+    fn default() -> Self {
+        let (output_stream, output_stream_handle) = OutputStream::try_default().unwrap();
+        let sink = Sink::try_new(&output_stream_handle).unwrap();
 
+        // Don't drop the stream handle for as long as sink lives!
         Self {
-            // stream_handle
+            sink,
+            output_stream,
+            output_stream_handle,
         }
     }
 }
@@ -39,17 +37,13 @@ impl Handler<Audio> for AudioPlayerActor {
     type Result = Result<(), std::io::Error>;
 
     fn handle(&mut self, msg: Audio, _ctx: &mut SyncContext<Self>) -> Self::Result {
-        println!("Actor 3: Received audio data {:?}", msg.0);
+        println!("Actor 3: Received audio data");
 
-        // assume you have your audio data in a Vec<u8> called `audio_data`
         let cursor = Cursor::new(msg.0);
         let source = Decoder::new(cursor).unwrap();
 
-        let (_stream, stream_handle) = OutputStream::try_default().unwrap();
-        let sink = Sink::try_new(&stream_handle).unwrap();
-        sink.append(source);
-        sink.play();
-        sink.sleep_until_end();
+        self.sink.append(source);
+        self.sink.sleep_until_end();
 
         Ok(())
     }
