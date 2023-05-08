@@ -13,6 +13,7 @@ impl Message for Sentence {
 }
 
 pub struct TtsActor {
+    client: Client,
     audio_player: Addr<AudioPlayerActor>,
 }
 
@@ -34,7 +35,8 @@ struct TextToSpeechRequest<'a> {
 
 impl TtsActor {
     pub fn with(audio_player: Addr<AudioPlayerActor>) -> Self {
-        Self { audio_player }
+        let client = Client::new();
+        Self { audio_player, client }
     }
 }
 
@@ -43,16 +45,18 @@ impl Handler<Sentence> for TtsActor {
 
     fn handle(&mut self, msg: Sentence, _: &mut Context<Self>) -> Self::Result {
         println!("Actor 2: Received {}", msg.0);
+
         let text = msg.0;
         let audio_player = self.audio_player.clone();
+        let client = self.client.clone();  // Client is already ARC-wrapped
 
         Box::pin(
             async move {
-                let client = Client::new();
                 let api_url = "https://api.elevenlabs.io/v1/text-to-speech/";
                 let voice_id = "EXAVITQu4vr4xnSDxMaL";
                 let api_key =
                     env::var("ELEVENLABS_API_KEY").expect("ELEVENLABS_API_KEY must be set");
+                let url = format!("{}{}", api_url, voice_id);
 
                 let voice_settings = VoiceSettings {
                     stability: 0,
@@ -63,7 +67,7 @@ impl Handler<Sentence> for TtsActor {
                     voice_settings,
                 };
                 let response = client
-                    .post(&format!("{}{}", api_url, voice_id))
+                    .post(&url)
                     .header("xi-api-key", api_key)
                     .json(&request_body)
                     .send()
@@ -72,7 +76,8 @@ impl Handler<Sentence> for TtsActor {
 
                 let data = response.bytes().await.unwrap().to_vec();
 
-                audio_player.send(Audio(data)).await.unwrap();
+                // Ensures that messages are in order
+                let _ = audio_player.send(Audio(data)).await.unwrap();
 
                 Ok(())
             }
