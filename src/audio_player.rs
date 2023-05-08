@@ -1,4 +1,4 @@
-use std::{io::Cursor, time::Duration};
+use std::io::Cursor;
 
 use actix::prelude::*;
 use rodio::{Decoder, OutputStream, OutputStreamHandle, Sink, Source};
@@ -8,26 +8,30 @@ pub struct Audio(pub Vec<u8>);
 impl Message for Audio {
     type Result = Result<(), std::io::Error>;
 }
+pub struct StatusRequest;
+
+impl Message for StatusRequest {
+    type Result = Result<Status, std::io::Error>;
+}
 
 pub struct AudioPlayerActor {
-    pub sink: Sink,
-    pub output_stream: OutputStream,
-    pub output_stream_handle: OutputStreamHandle,
-    pub remaining_duration: Duration,
+    sink: Sink,
+    // Don't drop the stream and stream handle for as long as the Sink lives!
+    #[warn(dead_code)]
+    output_stream: OutputStream,
+    #[warn(dead_code)]
+    output_stream_handle: OutputStreamHandle,
 }
 
 impl Default for AudioPlayerActor {
     fn default() -> Self {
         let (output_stream, output_stream_handle) = OutputStream::try_default().unwrap();
         let sink = Sink::try_new(&output_stream_handle).unwrap();
-        let remaining_duration = Duration::ZERO;
 
-        // Don't drop the stream handle for as long as sink lives!
         Self {
             sink,
             output_stream,
             output_stream_handle,
-            remaining_duration,
         }
     }
 }
@@ -40,28 +44,36 @@ impl Handler<Audio> for AudioPlayerActor {
     type Result = Result<(), std::io::Error>;
 
     fn handle(&mut self, msg: Audio, _ctx: &mut SyncContext<Self>) -> Self::Result {
-        println!("Actor 3: Received audio data");
+        println!("Audio Player: Received audio data");
 
-        let num_samples = msg.0.len();
         let cursor = Cursor::new(msg.0);
         let source = Decoder::new(cursor).unwrap();
 
-        let est_duration = calculate_duration(num_samples, source.sample_rate(), source.channels(), 16);
-
         self.sink.append(source);
-        self.sink.sleep_until_end();
-
-        self.remaining_duration += est_duration;
-
-        println!("Actor 3: Remaining: {:?}", self.remaining_duration);
 
         Ok(())
     }
 }
 
-fn calculate_duration(data_size: usize, sample_rate: u32, channels: u16, bits_per_sample: u16) -> Duration {
-    let bytes_per_sample = bits_per_sample / 8;
-    let total_samples = data_size / (bytes_per_sample as usize * channels as usize);
-    let duration_secs = total_samples as f32 / (sample_rate as f32 * channels as f32);
-    Duration::from_secs_f32(duration_secs)
+#[derive(PartialEq)]
+pub enum Status {
+    Idle,
+    Busy,
+}
+
+impl Handler<StatusRequest> for AudioPlayerActor {
+    type Result = Result<Status, std::io::Error>;
+
+    fn handle(&mut self, _msg: StatusRequest, _ctx: &mut SyncContext<Self>) -> Self::Result {
+        println!(
+            "Audio Player: Received status request. Sink empty? {}",
+            self.sink.empty()
+        );
+
+        if self.sink.empty() {
+            Ok(Status::Idle)
+        } else {
+            Ok(Status::Busy)
+        }
+    }
 }
