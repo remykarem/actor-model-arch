@@ -39,13 +39,14 @@ impl TtsActor {
 }
 
 impl Handler<Sentence> for TtsActor {
-    type Result = ResponseActFuture<Self, Result<(), ()>>;
+    type Result = ResponseFuture<Result<(), ()>>;
 
     fn handle(&mut self, msg: Sentence, _: &mut Context<Self>) -> Self::Result {
         println!("Actor 2: Received {}", msg.0);
         let text = msg.0;
+        let audio_player = self.audio_player.clone();
+
         Box::pin(
-            // Some async computation
             async move {
                 let client = Client::new();
                 let api_url = "https://api.elevenlabs.io/v1/text-to-speech/";
@@ -69,15 +70,13 @@ impl Handler<Sentence> for TtsActor {
                     .await
                     .unwrap();
 
-                response.bytes().await.unwrap().to_vec()
-            }
-            .into_actor(self) // converts future to ActorFuture
-            .map(|res, actor, _ctx| {
-                println!("Actor 2: Sending audio data with size {}", res.len());
-                // Do some computation with actor's state or context
-                actor.audio_player.do_send(Audio(res));
+                let data = response.bytes().await.unwrap().to_vec();
+
+                audio_player.send(Audio(data)).await.unwrap();
+
                 Ok(())
-            }),
+            }
         )
+
     }
 }
