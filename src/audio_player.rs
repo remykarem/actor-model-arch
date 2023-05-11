@@ -1,7 +1,7 @@
 use std::io::Cursor;
 
 use actix::prelude::*;
-use rodio::{Decoder, OutputStream, OutputStreamHandle, Sink, Source};
+use rodio::{Decoder, OutputStream, OutputStreamHandle, Sink};
 
 pub struct Audio(pub Vec<u8>);
 
@@ -17,9 +17,9 @@ impl Message for StatusRequest {
 pub struct AudioPlayerActor {
     sink: Sink,
     // Don't drop the stream and stream handle for as long as the Sink lives!
-    #[warn(dead_code)]
+    #[allow(dead_code)]
     output_stream: OutputStream,
-    #[warn(dead_code)]
+    #[allow(dead_code)]
     output_stream_handle: OutputStreamHandle,
 }
 
