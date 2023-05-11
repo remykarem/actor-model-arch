@@ -3,6 +3,7 @@ pub mod llm;
 pub mod stt;
 pub mod token_processor;
 pub mod tts;
+pub mod tts_polly;
 
 use std::time::Duration;
 
