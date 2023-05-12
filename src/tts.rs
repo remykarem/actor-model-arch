@@ -38,7 +38,11 @@ impl TtsActor {
     pub fn with(audio_player: Addr<AudioPlayerActor>) -> Self {
         let client = Client::new();
         let idle = true;
-        Self { audio_player, client, idle }
+        Self {
+            audio_player,
+            client,
+            idle,
+        }
     }
 }
 
@@ -50,50 +54,45 @@ impl Handler<Sentence> for TtsActor {
 
         let text = msg.0;
         let audio_player = self.audio_player.clone();
-        let client = self.client.clone();  // Client is already ARC-wrapped
+        let client = self.client.clone(); // Client is already ARC-wrapped
 
         self.idle = false;
 
-        let b = Box::pin(
-            async move {
+        let b = Box::pin(async move {
+            let api_url = "https://api.elevenlabs.io/v1/text-to-speech/";
+            let voice_id = "EXAVITQu4vr4xnSDxMaL";
+            let api_key = env::var("ELEVENLABS_API_KEY").expect("ELEVENLABS_API_KEY must be set");
+            let url = format!("{}{}", api_url, voice_id);
 
-                let api_url = "https://api.elevenlabs.io/v1/text-to-speech/";
-                let voice_id = "EXAVITQu4vr4xnSDxMaL";
-                let api_key =
-                    env::var("ELEVENLABS_API_KEY").expect("ELEVENLABS_API_KEY must be set");
-                let url = format!("{}{}", api_url, voice_id);
+            let voice_settings = VoiceSettings {
+                stability: 0,
+                similarity_boost: 0,
+            };
+            let request_body = TextToSpeechRequest {
+                text: &text,
+                voice_settings,
+            };
+            let response = client
+                .post(&url)
+                .header("xi-api-key", api_key)
+                .json(&request_body)
+                .send()
+                .await
+                .unwrap();
 
-                let voice_settings = VoiceSettings {
-                    stability: 0,
-                    similarity_boost: 0,
-                };
-                let request_body = TextToSpeechRequest {
-                    text: &text,
-                    voice_settings,
-                };
-                let response = client
-                    .post(&url)
-                    .header("xi-api-key", api_key)
-                    .json(&request_body)
-                    .send()
-                    .await
-                    .unwrap();
+            let data = response.bytes().await.unwrap().to_vec();
 
-                let data = response.bytes().await.unwrap().to_vec();
+            // Ensures that messages are in order
+            let _ = audio_player.send(Audio(data)).await.unwrap();
 
-                // Ensures that messages are in order
-                let _ = audio_player.send(Audio(data)).await.unwrap();
-
-                Ok(())
-            }
-        );
+            Ok(())
+        });
 
         self.idle = true;
 
         b
     }
 }
-
 
 impl Handler<StatusRequest> for TtsActor {
     type Result = Result<Status, std::io::Error>;

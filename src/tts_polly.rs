@@ -1,33 +1,84 @@
-use futures::StreamExt;
-use tokio::{fs::{write, File}, io::AsyncWriteExt};
-use polly::{types::{Engine, OutputFormat}, operation::synthesize_speech::SynthesizeSpeechOutput};
+use actix::prelude::*;
 use aws_sdk_polly as polly;
+use polly::{
+    types::{Engine, OutputFormat},
+    Client,
+};
 
+use crate::audio_player::{Audio, AudioPlayerActor, Status, StatusRequest};
 
-async fn synth(text: &str) {
-    let config = aws_config::load_from_env().await;
-    let client = polly::Client::new(&config);
-    let resp = client
-        .synthesize_speech()
-        .engine(Engine::Standard)
-        .voice_id(polly::types::VoiceId::Miguel)
-        .output_format(OutputFormat::Mp3)
-        .text(text)
-        .send()
-        .await
-        .unwrap();
+pub struct Sentence(pub String);
 
-    audio_to_file(resp).await;
+impl Message for Sentence {
+    type Result = Result<(), ()>;
 }
 
-async fn audio_to_file(
-    output: SynthesizeSpeechOutput,
-) {
-    let mut file = File::create("audio.mp3").await.unwrap();
-    let mut stream = output.audio_stream;
-    while let Some(bytes) = stream.next().await {
-        let bytes = bytes.unwrap();
-        file.write_all(&bytes).await.unwrap();
+pub struct TtsPollyActor {
+    audio_player: Addr<AudioPlayerActor>,
+    client: Client,
+    idle: bool,
+}
+
+impl Actor for TtsPollyActor {
+    type Context = Context<Self>;
+}
+
+impl TtsPollyActor {
+    pub async fn with(audio_player: Addr<AudioPlayerActor>) -> Self {
+        let config = aws_config::load_from_env().await;
+        let client = polly::Client::new(&config);
+        let idle = true;
+        Self {
+            audio_player,
+            client,
+            idle,
+        }
     }
-    file.flush().await.unwrap();
+}
+
+impl Handler<Sentence> for TtsPollyActor {
+    type Result = ResponseFuture<Result<(), ()>>;
+
+    fn handle(&mut self, msg: Sentence, _ctx: &mut Self::Context) -> Self::Result {
+        let audio_player = self.audio_player.clone();
+        let client = self.client.clone();
+
+        self.idle = false;
+
+        let b = Box::pin(async move {
+            let resp = client
+                .synthesize_speech()
+                .engine(Engine::Standard)
+                .voice_id(polly::types::VoiceId::Matthew)
+                .output_format(OutputFormat::Mp3)
+                .text(msg.0)
+                .send()
+                .await
+                .unwrap();
+
+            let data = resp.audio_stream.collect().await.unwrap().to_vec();
+
+            let _ = audio_player.send(Audio(data)).await.unwrap();
+
+            Ok(())
+        });
+
+        self.idle = true;
+
+        b
+    }
+}
+
+impl Handler<StatusRequest> for TtsPollyActor {
+    type Result = Result<Status, std::io::Error>;
+
+    fn handle(&mut self, _msg: StatusRequest, _ctx: &mut Context<Self>) -> Self::Result {
+        println!("TTS         : Received status request");
+
+        if self.idle {
+            Ok(Status::Idle)
+        } else {
+            Ok(Status::Busy)
+        }
+    }
 }

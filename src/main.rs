@@ -12,13 +12,13 @@ use audio_player::{AudioPlayerActor, Status, StatusRequest};
 use llm::LlmActor;
 use stt::{Stt, SttAction};
 use token_processor::TokenProcessorActor;
-use tts::TtsActor;
+use tts_polly::TtsPollyActor;
 
 #[actix_rt::main]
 async fn main() {
     // Initialise actors
     let audio_player = SyncArbiter::start(1, AudioPlayerActor::default);
-    let tts = TtsActor::with(audio_player.clone()).start();
+    let tts = TtsPollyActor::with(audio_player.clone()).await.start();
     let token_proc = TokenProcessorActor::with(tts.clone()).start();
     let llm = LlmActor::with(token_proc.clone()).start();
     let stt = SyncArbiter::start(1, move || {
@@ -40,7 +40,10 @@ async fn main() {
         let audio_status_request = audio_player.send(StatusRequest).await.unwrap().unwrap();
         let tts_status_request = tts.send(StatusRequest).await.unwrap().unwrap();
         let token_proc_status_request = token_proc.send(StatusRequest).await.unwrap().unwrap();
-        if audio_status_request == Status::Idle && token_proc_status_request == Status::Idle && tts_status_request == Status::Idle {
+        if audio_status_request == Status::Idle
+            && token_proc_status_request == Status::Idle
+            && tts_status_request == Status::Idle
+        {
             // Start recording
             let _ = stt.send(SttAction::RecordUntilSilence).await.unwrap();
         };
