@@ -73,6 +73,7 @@ dependencies = [
  "rodio",
  "rubato",
  "serde",
+ "serde_json",
  "tokio",
  "whisper-rs",
 ]
