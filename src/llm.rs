@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use actix::{Actor, Addr, Context, Handler, Message, ResponseFuture};
 use async_openai::types::{
     ChatCompletionRequestMessage, ChatCompletionResponseStreamMessage,
@@ -17,6 +19,7 @@ pub struct ChatChoiceDelta {
 
 pub struct LlmActor {
     token_proc: Addr<TokenProcessorActor>,
+    client: Arc<async_openai::Client>,
 }
 
 pub struct ChatMessage(pub String);
@@ -39,6 +42,7 @@ impl Handler<ChatMessage> for LlmActor {
             name: None,
         }];
         let token_proc = self.token_proc.clone();
+        let client = self.client.clone();
 
         Box::pin(async move {
             // Set up the request
@@ -50,7 +54,6 @@ impl Handler<ChatMessage> for LlmActor {
                 .unwrap();
 
             // Make the request
-            let client = async_openai::Client::new();
             let mut response = client.chat().create_stream(request).await.unwrap();
 
             // Process the stream
@@ -70,6 +73,7 @@ impl Handler<ChatMessage> for LlmActor {
 
 impl LlmActor {
     pub fn with(token_proc: Addr<TokenProcessorActor>) -> Self {
-        Self { token_proc }
+        let client = async_openai::Client::new();
+        Self { token_proc, client: Arc::new(client) }
     }
 }
