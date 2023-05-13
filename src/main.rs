@@ -6,6 +6,7 @@ pub mod stt;
 pub mod token_processor;
 pub mod tts;
 pub mod tts_polly;
+pub mod vectordb_qdrant;
 
 use std::time::Duration;
 
@@ -14,36 +15,52 @@ use audio_player::{AudioPlayerActor, Status, StatusRequest};
 use code_writer::CodeWriter;
 use interpreter::{Interpreter, Text};
 use llm::LlmActor;
+use qdrant_client::prelude::QdrantClient;
 use stt::{Stt, SttAction};
 use token_processor::TokenProcessorActor;
 use tts_polly::TtsPollyActor;
+use vectordb_qdrant::{QdrantStore, SearchRequest};
 
 #[actix_rt::main]
 async fn main() {
-    let audio_player = SyncArbiter::start(1, AudioPlayerActor::default);
-    let tts = TtsPollyActor::with(audio_player.clone()).await.start();
-    let code_writer = CodeWriter.start();
-    let interpreter = Interpreter::with(code_writer, tts).start();
-    let _ = interpreter
-        .send(Text(
-            r#"
-        {
-            "thought": "Hey there, I'm gonna write this file for you", 
-            "actions": [
-                {
-                    "writetofile": {
-                        "filename": "test.py",
-                        "content": "import sys\n\narg = sys.argv[1]"
-                    }
-                }
-            ]
-        }"#
-            .into(),
-        ))
+    let qdrant_client = QdrantStore::new().await.start();
+
+    let rsp = qdrant_client
+        .send(SearchRequest {
+            collection_name: "test_collection".into(),
+            vector: vec![0.05, 0.61, 0.76, 0.74],
+        })
         .await
         .unwrap();
 
-    actix_rt::time::sleep(Duration::from_secs(4)).await;
+    if let Ok(rsp) = rsp {
+        println!("{}", rsp);
+    }
+
+    // let audio_player = SyncArbiter::start(1, AudioPlayerActor::default);
+    // let tts = TtsPollyActor::with(audio_player.clone()).await.start();
+    // let code_writer = CodeWriter.start();
+    // let interpreter = Interpreter::with(code_writer, tts).start();
+    // let _ = interpreter
+    //     .send(Text(
+    //         r#"
+    //     {
+    //         "thought": "Hey there, I'm gonna write this file for you",
+    //         "actions": [
+    //             {
+    //                 "writetofile": {
+    //                     "filename": "test.py",
+    //                     "content": "import sys\n\narg = sys.argv[1]"
+    //                 }
+    //             }
+    //         ]
+    //     }"#
+    //         .into(),
+    //     ))
+    //     .await
+    //     .unwrap();
+
+    // actix_rt::time::sleep(Duration::from_secs(4)).await;
 }
 
 // #[actix_rt::main]
