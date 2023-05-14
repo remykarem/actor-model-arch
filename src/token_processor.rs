@@ -101,24 +101,43 @@ impl TokProc {
     }
 
     fn handle(&mut self, token: &str) {
+        // Find the next state and next thing to do
         let (next_state, next_action) = transition(self.state, self.data_buffer.as_slice(), token);
-        self.state = next_state;
+        
+        // Execute the next thing to do
         match next_action {
             Event::DoNothing => {}
             Event::Push { dst, pop } => {
                 let data: String = self.data_buffer.drain(..(self.data_buffer.len() - pop)).collect();
                 println!("{}", data);
-                // match dst {
-                //     Dst::Speech => todo!(),
-                //     Dst::Actions => todo!(),
-                // }
+                match dst {
+                    Dst::Speech => {
+                        // Don't do anything, there's a plaster code below
+                        // to handle speech eagerly
+                    },
+                    Dst::Actions => todo!(),
+                }
             }
             Event::AddToBuffer => {
                 self.data_buffer.extend(token.chars());
             }
         }
+            
+        // Plaster code: Process speech eagerly for user feedback
+        // TODO: this is... not ideal...
+        let text: String = self.data_buffer.clone().into_iter().collect();
+        if text.contains("<speak>") && text.contains("<sentence>") && text.contains("</sentence>") {
+            let first = text.find("<sentence>").unwrap();
+            let last = text.find("</sentence>").unwrap();
+            let h = &text[first+10..last];
+            // push
+            println!("{}", h);
+        }
+            
+        // Update state
+        self.state = next_state;
 
-        println!("{:?}", self.state);
+        // println!("{:?}", self.state);
     }
 }
 
@@ -255,7 +274,7 @@ mod tests {
     #[test]
     fn test_from_code_transition() {
         let mut tok_proc = TokProc::new();
-        let data = vec!["`", "``", "xml", "\n<speak>hello</speak>", "```"];
+        let data = vec!["`", "``", "xml", "\n<speak><sentence>hello</sentence></speak>", "```"];
         for dat in data {
             tok_proc.handle(dat);
         }

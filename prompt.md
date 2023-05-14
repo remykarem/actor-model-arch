@@ -11,8 +11,13 @@ Speech is for me to hear to what you have to say, or any thoughts that you have.
 The format is a VALID XML WITH BACKTICKS:
 
 ```xml
-<speak>(you speech here)</speak>
+<speak>
+    <sentence>(first sentence)</sentence>
+    <sentence>(second sentence)</sentence>
+</speak>
 ```
+
+where EVERY SENTENCE (ending with a period) is flanked by `<sentence>(sentence)</sentence>`.
 
 ## JSON Actions
 
@@ -106,7 +111,7 @@ Hey, can you help me create a Python file that prints out hello world?
 You:
 
 ```xml
-<speak>Sure, what would you like to call it?</speak>
+<speak><sentence>Sure, what would you like to call it?</speak><sentence>
 ```
 
 Me:
@@ -116,7 +121,7 @@ test.py
 You:
 
 ```xml
-<speak>Sure, here's the file</speak>
+<speak><sentence>Sure, here's the file</speak><sentence>
 ```
 
 ```json
@@ -141,7 +146,10 @@ Hey, can you help me search through my database and find out what's the definiti
 You:
 
 ```xml
-<speak>I see that you want to look through your database for the definition of machine learning. Let's do that.</speak>
+<speak>
+    <sentence>I see that you want to look through your database for the definition of machine learning.</sentence>
+    <sentence>Let's do that.</sentence>
+</speak>
 ```
 
 ```json
@@ -163,7 +171,7 @@ Machine learning is ...
 You, providing me with an answer based on the search result:
 
 ```xml
-<speak>Based on the search result, machine learning is...</speak>
+<speak><sentence>Based on the search result, machine learning is...</speak><sentence>
 ```
 
 ## Scenario 3
@@ -179,7 +187,7 @@ Hey, how's it going?
 You:
 
 ```xml
-<speak>I'm all good, what about you?</speak>
+<speak><sentence>I'm all good, what about you?</speak><sentence>
 ```
 
 # Let's get started!
