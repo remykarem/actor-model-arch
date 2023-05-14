@@ -3,41 +3,33 @@ use serde::Deserialize;
 
 use crate::{
     code_writer::{Code, CodeWriter},
-    llm::{ChatMessage, LlmActor},
-    tts_polly::{Sentence, TtsPollyActor},
-    vectordb_qdrant::{QdrantStore, SearchRequest}, stt::{SttAction, Stt},
+    vectordb_qdrant::{QdrantStore, SearchRequest}, audio_player::{StatusRequest, Status},
 };
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "lowercase")]
-enum Action {
+pub enum Action {
     Search(String),
     Writetofile { filename: String, content: String },
 }
 
 #[derive(Debug, Deserialize)]
-struct ThoughtActions {
+pub struct ThoughtActions {
     thought: String,
     action: Option<Action>,
-}
-
-#[derive(Debug, Deserialize)]
-struct Observation {
-    observation: String,
 }
 
 pub struct Text(pub String);
 
 impl Message for Text {
-    type Result = Result<(), ()>;
+    type Result = Result<String, ()>;
 }
 
 pub struct Interpreter {
     code_writer: Addr<CodeWriter>,
     qdrant: Addr<QdrantStore>,
-    llm: Addr<LlmActor>,
-    stt: Addr<Stt>,
-    tts: Addr<TtsPollyActor>,
+    observation: Option<String>,
+    idle: bool,
 }
 
 impl Actor for Interpreter {
@@ -45,62 +37,88 @@ impl Actor for Interpreter {
 }
 
 impl Interpreter {
-    pub fn with(
-        code_writer: Addr<CodeWriter>,
-        tts: Addr<TtsPollyActor>,
-        llm: Addr<LlmActor>,
-        stt: Addr<Stt>,
-        qdrant: Addr<QdrantStore>,
-    ) -> Self {
+    pub fn with(code_writer: Addr<CodeWriter>, qdrant: Addr<QdrantStore>) -> Self {
         Self {
             code_writer,
-            tts,
-            llm,
-            stt,
             qdrant,
+            observation: None,
+            idle: true,
         }
     }
 }
 
 impl Handler<Text> for Interpreter {
-    type Result = ResponseFuture<Result<(), ()>>;
+    type Result = ResponseActFuture<Self, Result<String, ()>>;
 
     fn handle(&mut self, msg: Text, _ctx: &mut Self::Context) -> Self::Result {
+        println!("Interpreter : Received Text request");
+
         let thought_actions: ThoughtActions =
-            serde_json::from_str(&msg.0).expect("Unabble to parse");
+            serde_json::from_str(&msg.0).expect("Unable to parse");
         let qdrant = self.qdrant.clone();
         let code_writer = self.code_writer.clone();
-        let stt = self.stt.clone();
-        let llm = self.llm.clone();
-        let tts = self.tts.clone();
 
-        Box::pin(async move {
-            tts.do_send(Sentence(thought_actions.thought));
+        self.idle = false;
 
-            // If there are actions, execute them
-            if let Some(action) = thought_actions.action {
-                let resp = match action {
-                    Action::Writetofile { filename, content } => {
-                        let _ = code_writer.send(Code { filename, content }).await.unwrap();
-                        "dd".into()
-                    }
-                    Action::Search(stuff) => {
-                        qdrant
+        Box::pin(
+            async move {
+                println!("Interpreter : {:?}", thought_actions.action);
+
+                // If there are actions, execute them
+                if let Some(action) = thought_actions.action {
+                    match action {
+                        Action::Writetofile { filename, content } => {
+                            println!("Interpreter : Sending to write to file");
+                            let _ = code_writer.send(Code { filename, content }).await.unwrap();
+                            "dd".into()
+                        }
+                        Action::Search(stuff) => qdrant
                             .send(SearchRequest {
                                 collection_name: "test_collection".into(),
                                 vector: vec![0.05, 0.61, 0.76, 0.74],
                             })
                             .await
                             .unwrap()
-                            .unwrap()
+                            .unwrap(),
                     }
-                };
-                let _ = llm.send(ChatMessage(resp)).await;
-            } else {
-                let _ = stt.send(SttAction::RecordUntilSilence).await.unwrap();
+                } else {
+                    "d".into()
+                }
             }
+            .into_actor(self)
+            .map(|res, act, _ctx| {
+                act.observation = Some(res);
+                act.idle = true;
+                Ok("res".into())
+            })
+        )
+    }
+}
 
-            Ok(())
-        })
+impl Handler<StatusRequest> for Interpreter {
+    type Result = Result<Status, std::io::Error>;
+
+    fn handle(&mut self, _msg: StatusRequest, _ctx: &mut Context<Self>) -> Self::Result {
+        println!("Interpreter : Received status request");
+
+        if self.idle{
+            Ok(Status::Idle)
+        } else {
+            Ok(Status::Busy)
+        }
+    }
+}
+
+pub struct GetObservations;
+
+impl Message for GetObservations {
+    type Result = Option<String>;
+}
+
+impl Handler<GetObservations> for Interpreter {
+    type Result = Option<String>;
+
+    fn handle(&mut self, _msg: GetObservations, _ctx: &mut Context<Self>) -> Self::Result {
+        self.observation.clone()
     }
 }
