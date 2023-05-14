@@ -45,7 +45,7 @@ impl Handler<SttAction> for Stt {
         match msg {
             SttAction::RecordUntilSilence => {
                 let utterance = self.record();
-                self.llm.do_send(ChatMessage(utterance));
+                self.llm.do_send(ChatMessage(utterance, async_openai::types::Role::User));
             }
             SttAction::Pause => {
                 self.stream.pause().expect("Failed to pause stream");

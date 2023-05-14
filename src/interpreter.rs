@@ -105,7 +105,7 @@ impl Handler<StatusRequest> for Interpreter {
     type Result = Result<Status, std::io::Error>;
 
     fn handle(&mut self, _msg: StatusRequest, _ctx: &mut Context<Self>) -> Self::Result {
-        println!("Interpreter : Received status request");
+        // println!("Interpreter : Received status request. Idle? {}", self.idle);
 
         if self.idle {
             Ok(Status::Idle)

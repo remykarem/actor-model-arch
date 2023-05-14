@@ -44,7 +44,7 @@ impl Handler<Audio> for AudioPlayerActor {
     type Result = Result<(), std::io::Error>;
 
     fn handle(&mut self, msg: Audio, _ctx: &mut SyncContext<Self>) -> Self::Result {
-        println!("Audio Player: Received audio data");
+        println!("Audio Player : Received audio data");
 
         let cursor = Cursor::new(msg.0);
         let source = Decoder::new(cursor).unwrap();
@@ -65,10 +65,10 @@ impl Handler<StatusRequest> for AudioPlayerActor {
     type Result = Result<Status, std::io::Error>;
 
     fn handle(&mut self, _msg: StatusRequest, _ctx: &mut SyncContext<Self>) -> Self::Result {
-        println!(
-            "Audio Player: Received status request. Sink empty? {}",
-            self.sink.empty()
-        );
+        // println!(
+        //     "Audio Player: Received status request. Sink empty? {}",
+        //     self.sink.empty()
+        // );
 
         if self.sink.empty() {
             Ok(Status::Idle)

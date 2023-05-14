@@ -11,6 +11,7 @@ pub mod vectordb_qdrant;
 use std::time::Duration;
 
 use actix::prelude::*;
+use async_openai::types::Role;
 use audio_player::{AudioPlayerActor, Status, StatusRequest};
 use code_writer::CodeWriter;
 use interpreter::{GetObservations, Interpreter, Text, ThoughtActions};
@@ -32,7 +33,7 @@ async fn main() {
     // Initialise actors
     let audio_player = SyncArbiter::start(1, AudioPlayerActor::default);
     let tts = TtsPollyActor::with(audio_player.clone()).await.start();
-    let token_proc = TokenProcessorActor::with(tts.clone()).start();
+    let token_proc = TokenProcessorActor::with(tts.clone(), interpreter.clone()).start();
 
     // LLM
     let llm = LlmActor::with(token_proc.clone()).start();
@@ -50,7 +51,7 @@ async fn main() {
 
     actix_rt::time::sleep(Duration::from_secs(1)).await;
 
-    llm.do_send(ChatMessage(INITIAL_PROMPT.into()));
+    let _ = llm.send(ChatMessage(INITIAL_PROMPT.into(), Role::System)).await.unwrap();
 
     // tts.do_send(Sentence("Hey there, I'm gonna write this file for you".into()));
     // let _ = interpreter.send(Text(
@@ -96,7 +97,7 @@ async fn main() {
             // Continue with what its doing, or ask for input
             if let Some(observation) = observation {
                 println!("--- observation: {} ---", observation);
-                let _ = llm.send(ChatMessage(observation)).await.unwrap();
+                let _ = llm.send(ChatMessage(observation, Role::User)).await.unwrap();
             } else {
                 // Start recording
                 let _ = stt.send(SttAction::RecordUntilSilence).await.unwrap();

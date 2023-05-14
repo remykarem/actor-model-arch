@@ -40,6 +40,8 @@ impl Handler<Sentence> for TtsPollyActor {
     type Result = ResponseFuture<Result<(), ()>>;
 
     fn handle(&mut self, msg: Sentence, _ctx: &mut Self::Context) -> Self::Result {
+        println!("TTS          : Received {}", msg.0.trim());
+
         let audio_player = self.audio_player.clone();
         let client = self.client.clone();
 
@@ -51,7 +53,7 @@ impl Handler<Sentence> for TtsPollyActor {
                 .engine(Engine::Standard)
                 .voice_id(polly::types::VoiceId::Matthew)
                 .output_format(OutputFormat::Mp3)
-                .text(msg.0)
+                .text(msg.0.trim())
                 .send()
                 .await
                 .unwrap();
@@ -73,7 +75,7 @@ impl Handler<StatusRequest> for TtsPollyActor {
     type Result = Result<Status, std::io::Error>;
 
     fn handle(&mut self, _msg: StatusRequest, _ctx: &mut Context<Self>) -> Self::Result {
-        println!("TTS         : Received status request");
+        // println!("TTS         : Received status request");
 
         if self.idle {
             Ok(Status::Idle)
