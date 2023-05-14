@@ -54,7 +54,6 @@ async fn main() {
     let _ = interpreter.send(Text(
         r#"
         {
-            "thought": "Hey there, I'm gonna write this file for you",
             "actions": [
                 {
                     "writetofile": {

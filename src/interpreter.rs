@@ -19,7 +19,6 @@ pub enum Action {
 
 #[derive(Debug, Deserialize)]
 pub struct ThoughtActions {
-    thought: String,
     actions: Vec<Action>,
 }
 
