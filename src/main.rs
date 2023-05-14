@@ -55,12 +55,20 @@ async fn main() {
         r#"
         {
             "thought": "Hey there, I'm gonna write this file for you",
-            "action": {
-                "writetofile": {
-                    "filename": "test.py",
-                    "content": "import sys\n\narg = sys.argv[1]"
+            "actions": [
+                {
+                    "writetofile": {
+                        "filename": "test.py",
+                        "content": "import sys\n\narg = sys.argv[1]"
+                    }
+                },
+                {
+                    "writetofile": {
+                        "filename": "testing.py",
+                        "content": "import sys\n\narg = sys.argv[1]"
+                    }
                 }
-            }
+            ]
         }"#
         .into(),
     )).await.unwrap();

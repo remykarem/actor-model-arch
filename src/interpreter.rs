@@ -1,9 +1,13 @@
+use std::sync::Arc;
+
 use actix::prelude::*;
 use serde::Deserialize;
+use tokio::sync::Mutex;
 
 use crate::{
+    audio_player::{Status, StatusRequest},
     code_writer::{Code, CodeWriter},
-    vectordb_qdrant::{QdrantStore, SearchRequest}, audio_player::{StatusRequest, Status},
+    vectordb_qdrant::{QdrantStore, SearchRequest},
 };
 
 #[derive(Debug, Deserialize)]
@@ -16,19 +20,19 @@ pub enum Action {
 #[derive(Debug, Deserialize)]
 pub struct ThoughtActions {
     thought: String,
-    action: Option<Action>,
+    actions: Vec<Action>,
 }
 
 pub struct Text(pub String);
 
 impl Message for Text {
-    type Result = Result<String, ()>;
+    type Result = Result<(), ()>;
 }
 
 pub struct Interpreter {
     code_writer: Addr<CodeWriter>,
     qdrant: Addr<QdrantStore>,
-    observation: Option<String>,
+    observations: Arc<Mutex<Vec<String>>>,
     idle: bool,
 }
 
@@ -41,57 +45,60 @@ impl Interpreter {
         Self {
             code_writer,
             qdrant,
-            observation: None,
+            observations: Arc::new(Mutex::new(vec![])),
             idle: true,
         }
     }
 }
 
 impl Handler<Text> for Interpreter {
-    type Result = ResponseActFuture<Self, Result<String, ()>>;
+    type Result = ResponseFuture<Result<(), ()>>;
 
     fn handle(&mut self, msg: Text, _ctx: &mut Self::Context) -> Self::Result {
-        println!("Interpreter : Received Text request");
-
+        
         let thought_actions: ThoughtActions =
-            serde_json::from_str(&msg.0).expect("Unable to parse");
+        serde_json::from_str(&msg.0).expect("Unable to parse");
+
+        println!("Interpreter : Received {:?}", thought_actions.actions);
+
         let qdrant = self.qdrant.clone();
         let code_writer = self.code_writer.clone();
 
         self.idle = false;
 
-        Box::pin(
+        let observations = self.observations.clone();
+
+        let b = Box::pin(
             async move {
-                println!("Interpreter : {:?}", thought_actions.action);
 
                 // If there are actions, execute them
-                if let Some(action) = thought_actions.action {
+                for action in thought_actions.actions {
                     match action {
                         Action::Writetofile { filename, content } => {
                             println!("Interpreter : Sending to write to file");
                             let _ = code_writer.send(Code { filename, content }).await.unwrap();
-                            "dd".into()
+                            observations.lock().await.push("value".into());
                         }
-                        Action::Search(stuff) => qdrant
+                        Action::Search(stuff) => {
+                            qdrant
                             .send(SearchRequest {
                                 collection_name: "test_collection".into(),
                                 vector: vec![0.05, 0.61, 0.76, 0.74],
                             })
                             .await
                             .unwrap()
-                            .unwrap(),
+                            .unwrap();
+                            observations.lock().await.push("value".into());
+                        }
                     }
-                } else {
-                    "d".into()
                 }
+                Ok(())
             }
-            .into_actor(self)
-            .map(|res, act, _ctx| {
-                act.observation = Some(res);
-                act.idle = true;
-                Ok("res".into())
-            })
-        )
+        );
+
+        self.idle = true;
+
+        b
     }
 }
 
@@ -101,7 +108,7 @@ impl Handler<StatusRequest> for Interpreter {
     fn handle(&mut self, _msg: StatusRequest, _ctx: &mut Context<Self>) -> Self::Result {
         println!("Interpreter : Received status request");
 
-        if self.idle{
+        if self.idle {
             Ok(Status::Idle)
         } else {
             Ok(Status::Busy)
@@ -116,9 +123,15 @@ impl Message for GetObservations {
 }
 
 impl Handler<GetObservations> for Interpreter {
-    type Result = Option<String>;
+    type Result = ResponseFuture<Option<String>>;
 
     fn handle(&mut self, _msg: GetObservations, _ctx: &mut Context<Self>) -> Self::Result {
-        self.observation.clone()
+        let observations = self.observations.clone();
+        Box::pin(
+            async move {
+                let mut m = observations.lock().await;
+                m.pop()
+            }
+        )
     }
 }
