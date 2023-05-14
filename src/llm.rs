@@ -10,6 +10,8 @@ use serde::Deserialize;
 
 use crate::token_processor::{TokenProcessorActor, Token};
 
+pub const INITIAL_PROMPT: &str = include_str!("prompt.md");
+
 #[derive(Debug, Deserialize, Clone)]
 pub struct ChatChoiceDelta {
     pub index: u32,

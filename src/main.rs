@@ -14,7 +14,7 @@ use actix::prelude::*;
 use audio_player::{AudioPlayerActor, Status, StatusRequest};
 use code_writer::CodeWriter;
 use interpreter::{GetObservations, Interpreter, Text, ThoughtActions};
-use llm::{ChatMessage, LlmActor};
+use llm::{ChatMessage, LlmActor, INITIAL_PROMPT};
 use stt::{Stt, SttAction};
 use token_processor::TokenProcessorActor;
 use tts_polly::{Sentence, TtsPollyActor};
@@ -50,27 +50,29 @@ async fn main() {
 
     actix_rt::time::sleep(Duration::from_secs(1)).await;
 
+    llm.do_send(ChatMessage(INITIAL_PROMPT.into()));
+
     // tts.do_send(Sentence("Hey there, I'm gonna write this file for you".into()));
-    let _ = interpreter.send(Text(
-        r#"
-        {
-            "actions": [
-                {
-                    "writetofile": {
-                        "filename": "test.py",
-                        "content": "import sys\n\narg = sys.argv[1]"
-                    }
-                },
-                {
-                    "writetofile": {
-                        "filename": "testing.py",
-                        "content": "import sys\n\narg = sys.argv[1]"
-                    }
-                }
-            ]
-        }"#
-        .into(),
-    )).await.unwrap();
+    // let _ = interpreter.send(Text(
+    //     r#"
+    //     {
+    //         "actions": [
+    //             {
+    //                 "writetofile": {
+    //                     "filename": "test.py",
+    //                     "content": "import sys\n\narg = sys.argv[1]"
+    //                 }
+    //             },
+    //             {
+    //                 "writetofile": {
+    //                     "filename": "testing.py",
+    //                     "content": "import sys\n\narg = sys.argv[1]"
+    //                 }
+    //             }
+    //         ]
+    //     }"#
+    //     .into(),
+    // )).await.unwrap();
 
     // Start the turn-based conversation
     loop {
