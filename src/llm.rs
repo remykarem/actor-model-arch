@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use actix::{Actor, Addr, Context, Handler, Message, ResponseFuture, ResponseActFuture, WrapFuture, ActorFutureExt};
+use actix::{Actor, Addr, Context, Handler, Message, ResponseActFuture, WrapFuture, ActorFutureExt};
 use async_openai::types::{
     ChatCompletionRequestMessage,
     ChatCompletionResponseStreamMessage, CreateChatCompletionRequestArgs, Role,

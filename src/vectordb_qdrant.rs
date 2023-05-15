@@ -1,16 +1,10 @@
 use actix::prelude::*;
 
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
-};
+use std::sync::Arc;
 
 use qdrant_client::{
     prelude::*,
-    qdrant::{
-        vectors_config::Config, with_payload_selector::SelectorOptions, PayloadIncludeSelector,
-        VectorParams, VectorsConfig, WithPayloadSelector,
-    },
+    qdrant::{with_payload_selector::SelectorOptions, PayloadIncludeSelector, WithPayloadSelector},
 };
 
 pub struct SearchRequest {
@@ -37,7 +31,9 @@ impl QdrantStore {
             .await
             .expect("Failed to create client");
 
-        Self { client: Arc::new(client) }
+        Self {
+            client: Arc::new(client),
+        }
     }
 }
 

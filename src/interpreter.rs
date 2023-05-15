@@ -78,7 +78,7 @@ impl Handler<Text> for Interpreter {
                             let _ = code_writer.send(Code { filename, content }).await.unwrap();
                             observations.lock().await.push("value".into());
                         }
-                        Action::Search(stuff) => {
+                        Action::Search(_) => {
                             qdrant
                             .send(SearchRequest {
                                 collection_name: "test_collection".into(),

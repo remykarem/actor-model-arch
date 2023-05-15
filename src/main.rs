@@ -14,11 +14,11 @@ use actix::prelude::*;
 use async_openai::types::Role;
 use audio_player::{AudioPlayerActor, Status, StatusRequest};
 use code_writer::CodeWriter;
-use interpreter::{GetObservations, Interpreter, Text, ThoughtActions};
+use interpreter::{GetObservations, Interpreter};
 use llm::{ChatMessage, LlmActor, INITIAL_PROMPT};
 use stt::{Stt, SttAction};
 use token_processor::TokenProcessorActor;
-use tts_polly::{Sentence, TtsPollyActor};
+use tts_polly::TtsPollyActor;
 use vectordb_qdrant::QdrantStore;
 
 #[actix_rt::main]
@@ -46,34 +46,13 @@ async fn main() {
         )
     });
 
-    // Get the ball rolling
-    // let _ = stt.send(SttAction::RecordUntilSilence).await.unwrap();
-
     actix_rt::time::sleep(Duration::from_secs(1)).await;
-
-    let _ = llm.send(ChatMessage(INITIAL_PROMPT.into(), Role::System)).await.unwrap();
-
-    // tts.do_send(Sentence("Hey there, I'm gonna write this file for you".into()));
-    // let _ = interpreter.send(Text(
-    //     r#"
-    //     {
-    //         "actions": [
-    //             {
-    //                 "writetofile": {
-    //                     "filename": "test.py",
-    //                     "content": "import sys\n\narg = sys.argv[1]"
-    //                 }
-    //             },
-    //             {
-    //                 "writetofile": {
-    //                     "filename": "testing.py",
-    //                     "content": "import sys\n\narg = sys.argv[1]"
-    //                 }
-    //             }
-    //         ]
-    //     }"#
-    //     .into(),
-    // )).await.unwrap();
+    
+    // Get the ball rolling
+    let _ = llm
+        .send(ChatMessage(INITIAL_PROMPT.into(), Role::System))
+        .await
+        .unwrap();
 
     // Start the turn-based conversation
     loop {
@@ -99,7 +78,10 @@ async fn main() {
             // Continue with what its doing, or ask for input
             if let Some(observation) = observation {
                 println!("--- observation: {} ---", observation);
-                let _ = llm.send(ChatMessage(observation, Role::User)).await.unwrap();
+                let _ = llm
+                    .send(ChatMessage(observation, Role::User))
+                    .await
+                    .unwrap();
             } else {
                 // Start recording
                 let _ = stt.send(SttAction::RecordUntilSilence).await.unwrap();

@@ -42,7 +42,6 @@ impl Handler<Token> for TokenProcessorActor {
     type Result = ();
 
     fn handle(&mut self, msg: Token, _ctx: &mut Context<Self>) -> Self::Result {
-        println!("Token Proc   : Current buffer: {:?}", self.data_buffer);
         println!("Token Proc   : Received token {}", msg.0);
         self.idle = false;
 
@@ -70,17 +69,6 @@ impl Handler<Token> for TokenProcessorActor {
                 self.data_buffer.extend(token.chars());
             }
         }
-            
-        // Plaster code: Process speech eagerly for user feedback
-        // TODO: this is... not ideal...
-        // let text: String = self.data_buffer.clone().into_iter().collect();
-        // if text.contains("<speak>") && text.contains("<sentence>") && text.contains("</sentence>") {
-        //     let first = text.find("<sentence>").unwrap();
-        //     let last = text.find("</sentence>").unwrap();
-        //     let h = &text[first+10..last];
-        //     // push
-        //     println!("{}", h);
-        // }
             
         // Update state
         self.state = next_state;
@@ -253,15 +241,5 @@ fn transition(
             }
         }
         (Parsing(parse_state), _, _) => (Parsing(parse_state), AddToBuffer),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_from_code_transition() {
-        let buff = vec!['\n', 'I', ' ', 'a', 'c', 'k', 'n', 'o', 'w', 'l', 'e', 'd', 'g', 'e', '.', '\n', '`', '`', '`', '\n', '\n'];
     }
 }
