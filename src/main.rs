@@ -7,6 +7,7 @@ pub mod token_processor;
 pub mod tts;
 pub mod tts_polly;
 pub mod vectordb_qdrant;
+pub mod embedding;
 
 use std::time::Duration;
 
@@ -14,6 +15,7 @@ use actix::prelude::*;
 use async_openai::types::Role;
 use audio_player::{AudioPlayerActor, Status, StatusRequest};
 use code_writer::CodeWriter;
+use embedding::{EmbeddingModel, EmbeddingQuery};
 use interpreter::{GetObservations, Interpreter};
 use llm::{ChatMessage, LlmActor, INITIAL_PROMPT};
 use stt::{Stt, SttAction};
@@ -21,8 +23,10 @@ use token_processor::TokenProcessorActor;
 use tts_polly::TtsPollyActor;
 use vectordb_qdrant::QdrantStore;
 
-#[tokio::main]
+#[actix_rt::main]
 async fn main() {
+    let embedding = SyncArbiter::start(1, EmbeddingModel::default);
+
     // Tools
     let qdrant_client: Addr<QdrantStore> = QdrantStore::new().await.start();
     let code_writer = CodeWriter.start();
