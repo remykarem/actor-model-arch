@@ -7,6 +7,7 @@ use async_openai::types::{
 };
 use futures::StreamExt;
 use serde::Deserialize;
+use anyhow::Result;
 
 use crate::{token_processor::{Token, TokenProcessorActor}, audio_player::{StatusRequest, Status}};
 
@@ -27,7 +28,7 @@ pub struct LlmActor {
 }
 
 #[derive(Message)]
-#[rtype(result = "Result<(), ()>")]
+#[rtype(result = "Result<()>")]
 pub struct ChatMessage(pub String, pub Role);
 
 impl Actor for LlmActor {
@@ -35,7 +36,7 @@ impl Actor for LlmActor {
 }
 
 impl Handler<ChatMessage> for LlmActor {
-    type Result = ResponseActFuture<Self, Result<(), ()>>;
+    type Result = ResponseActFuture<Self, Result<()>>;
 
     fn handle(&mut self, msg: ChatMessage, _ctx: &mut Self::Context) -> Self::Result {
         println!("LLM         : Received {:?}", msg.0);
@@ -108,7 +109,7 @@ impl LlmActor {
 }
 
 impl Handler<StatusRequest> for LlmActor {
-    type Result = Result<Status, std::io::Error>;
+    type Result = Result<Status>;
 
     fn handle(&mut self, _msg: StatusRequest, _ctx: &mut Context<Self>) -> Self::Result {
         if self.idle {

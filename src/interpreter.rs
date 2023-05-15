@@ -3,7 +3,7 @@ use std::sync::Arc;
 use actix::prelude::*;
 use serde::Deserialize;
 use tokio::sync::Mutex;
-
+use anyhow::Result;
 use crate::{
     audio_player::{Status, StatusRequest},
     code_writer::{Code, CodeWriter},
@@ -23,7 +23,7 @@ pub struct ThoughtActions {
 }
 
 #[derive(Message)]
-#[rtype(result = "Result<(), ()>")]
+#[rtype(result = "Result<()>")]
 pub struct Text(pub String);
 
 pub struct Interpreter {
@@ -49,7 +49,7 @@ impl Interpreter {
 }
 
 impl Handler<Text> for Interpreter {
-    type Result = ResponseFuture<Result<(), ()>>;
+    type Result = ResponseFuture<Result<()>>;
 
     fn handle(&mut self, msg: Text, _ctx: &mut Self::Context) -> Self::Result {
         
@@ -100,7 +100,7 @@ impl Handler<Text> for Interpreter {
 }
 
 impl Handler<StatusRequest> for Interpreter {
-    type Result = Result<Status, std::io::Error>;
+    type Result = Result<Status>;
 
     fn handle(&mut self, _msg: StatusRequest, _ctx: &mut Context<Self>) -> Self::Result {
         // println!("Interpreter : Received status request. Idle? {}", self.idle);

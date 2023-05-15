@@ -1,5 +1,5 @@
 use std::env;
-
+use anyhow::Result;
 use actix::prelude::*;
 use reqwest::Client;
 use serde::Serialize;
@@ -7,7 +7,7 @@ use serde::Serialize;
 use crate::audio_player::{Audio, AudioPlayerActor, Status, StatusRequest};
 
 #[derive(Message)]
-#[rtype(result = "Result<(), ()>")]
+#[rtype(result = "Result<()>")]
 pub struct Utterance(pub String);
 
 pub struct TtsActor {
@@ -45,7 +45,7 @@ impl TtsActor {
 }
 
 impl Handler<Utterance> for TtsActor {
-    type Result = ResponseFuture<Result<(), ()>>;
+    type Result = ResponseFuture<Result<()>>;
 
     fn handle(&mut self, msg: Utterance, _: &mut Context<Self>) -> Self::Result {
         println!("TTS         : Received {}", msg.0);
@@ -93,7 +93,7 @@ impl Handler<Utterance> for TtsActor {
 }
 
 impl Handler<StatusRequest> for TtsActor {
-    type Result = Result<Status, std::io::Error>;
+    type Result = Result<Status>;
 
     fn handle(&mut self, _msg: StatusRequest, _ctx: &mut Context<Self>) -> Self::Result {
         println!("TTS         : Received status request");

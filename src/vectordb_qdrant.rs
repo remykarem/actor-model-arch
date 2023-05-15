@@ -1,5 +1,7 @@
 use actix::prelude::*;
 
+use anyhow::Result;
+
 use std::sync::Arc;
 
 use qdrant_client::{
@@ -8,7 +10,7 @@ use qdrant_client::{
 };
 
 #[derive(Message)]
-#[rtype(result = "Result<String, ()>")]
+#[rtype(result = "Result<String>")]
 pub struct SearchRequest {
     pub collection_name: String,
     pub vector: Vec<f32>,
@@ -36,7 +38,7 @@ impl QdrantStore {
 }
 
 impl Handler<SearchRequest> for QdrantStore {
-    type Result = ResponseFuture<Result<String, ()>>;
+    type Result = ResponseFuture<Result<String>>;
 
     fn handle(&mut self, msg: SearchRequest, _ctx: &mut Self::Context) -> Self::Result {
         let client = self.client.clone();

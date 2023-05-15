@@ -2,13 +2,14 @@ use std::io::Cursor;
 
 use actix::prelude::*;
 use rodio::{Decoder, OutputStream, OutputStreamHandle, Sink};
+use anyhow::Result;
 
 #[derive(Message)]
-#[rtype(result = "Result<(), std::io::Error>")]
+#[rtype(result = "Result<()>")]
 pub struct Audio(pub Vec<u8>);
 
 #[derive(Message)]
-#[rtype(result = "Result<Status, std::io::Error>")]
+#[rtype(result = "Result<Status>")]
 pub struct StatusRequest;
 
 #[derive(PartialEq)]
@@ -44,7 +45,7 @@ impl Actor for AudioPlayerActor {
 }
 
 impl Handler<Audio> for AudioPlayerActor {
-    type Result = Result<(), std::io::Error>;
+    type Result = Result<()>;
 
     fn handle(&mut self, msg: Audio, _ctx: &mut SyncContext<Self>) -> Self::Result {
         println!("Audio Player : Received audio data");
@@ -59,7 +60,7 @@ impl Handler<Audio> for AudioPlayerActor {
 }
 
 impl Handler<StatusRequest> for AudioPlayerActor {
-    type Result = Result<Status, std::io::Error>;
+    type Result = Result<Status>;
 
     fn handle(&mut self, _msg: StatusRequest, _ctx: &mut SyncContext<Self>) -> Self::Result {
         // println!(

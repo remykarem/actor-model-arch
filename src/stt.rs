@@ -5,7 +5,7 @@ use rubato::{InterpolationParameters, InterpolationType, Resampler, SincFixedIn,
 use std::sync::mpsc::{self, Receiver, SyncSender};
 use std::time::{Duration, Instant};
 use whisper_rs::{convert_stereo_to_mono_audio, FullParams, SamplingStrategy, WhisperContext};
-
+use anyhow::Result;
 use crate::llm::{LlmActor, ChatMessage};
 
 const VOLUME_THRESHOLD: f32 = 0.05;
@@ -31,14 +31,14 @@ impl Actor for Stt {
 
 
 #[derive(Message)]
-#[rtype(result = "Result<(), std::io::Error>")]
+#[rtype(result = "Result<()>")]
 pub enum SttAction {
     RecordUntilSilence,
     Pause,
 }
 
 impl Handler<SttAction> for Stt {
-    type Result = Result<(), std::io::Error>;
+    type Result = Result<()>;
 
     fn handle(&mut self, msg: SttAction, _ctx: &mut Self::Context) -> Self::Result {
         match msg {

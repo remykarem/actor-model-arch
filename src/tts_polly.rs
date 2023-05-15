@@ -4,11 +4,12 @@ use polly::{
     types::{Engine, OutputFormat},
     Client,
 };
+use anyhow::Result;
 
 use crate::audio_player::{Audio, AudioPlayerActor, Status, StatusRequest};
 
 #[derive(Message)]
-#[rtype(result = "Result<(), ()>")]
+#[rtype(result = "Result<()>")]
 pub struct Utterance(pub String);
 
 pub struct TtsPollyActor {
@@ -35,7 +36,7 @@ impl TtsPollyActor {
 }
 
 impl Handler<Utterance> for TtsPollyActor {
-    type Result = ResponseFuture<Result<(), ()>>;
+    type Result = ResponseFuture<Result<()>>;
 
     fn handle(&mut self, msg: Utterance, _ctx: &mut Self::Context) -> Self::Result {
         println!("TTS          : Received {}", msg.0.trim());
@@ -70,7 +71,7 @@ impl Handler<Utterance> for TtsPollyActor {
 }
 
 impl Handler<StatusRequest> for TtsPollyActor {
-    type Result = Result<Status, std::io::Error>;
+    type Result = Result<Status>;
 
     fn handle(&mut self, _msg: StatusRequest, _ctx: &mut Context<Self>) -> Self::Result {
         // println!("TTS         : Received status request");

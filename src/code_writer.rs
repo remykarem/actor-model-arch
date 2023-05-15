@@ -1,8 +1,9 @@
 use actix::prelude::*;
 use tokio::{fs::File, io::AsyncWriteExt};
+use anyhow::Result;
 
 #[derive(Message)]
-#[rtype(result = "Result<(), ()>")]
+#[rtype(result = "Result<()>")]
 pub struct Code {
     pub filename: String,
     pub content: String,
@@ -15,7 +16,7 @@ impl Actor for CodeWriter {
 }
 
 impl Handler<Code> for CodeWriter {
-    type Result = ResponseFuture<Result<(), ()>>;
+    type Result = ResponseFuture<Result<()>>;
 
     fn handle(&mut self, msg: Code, _ctx: &mut Self::Context) -> Self::Result {
         Box::pin(async move {

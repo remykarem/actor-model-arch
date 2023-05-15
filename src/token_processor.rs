@@ -1,4 +1,5 @@
 use actix::prelude::*;
+use anyhow::Result;
 
 use crate::{
     audio_player::{Status, StatusRequest},
@@ -79,7 +80,7 @@ impl Handler<Token> for TokenProcessorActor {
 }
 
 impl Handler<StatusRequest> for TokenProcessorActor {
-    type Result = Result<Status, std::io::Error>;
+    type Result = Result<Status>;
 
     fn handle(&mut self, _msg: StatusRequest, _ctx: &mut Context<Self>) -> Self::Result {
         // println!("Token Proc  : Received status request");
