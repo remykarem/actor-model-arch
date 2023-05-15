@@ -137,7 +137,7 @@ impl GetInput for Stt {
     /// Record until no voice activity is detected, then output the text.
     fn record(&mut self) -> String {
         // Start recording
-        println!("Start recording");
+        println!("Audio Player : Start recording");
         self.stream.play().expect("Failed to start recording");
 
         // Get the audio data from the input stream and run voice activity detection
@@ -158,7 +158,7 @@ impl GetInput for Stt {
         params.set_print_timestamps(false);
 
         // Run the Whisper ASR model
-        println!("Run ASR model");
+        println!("Audio Player : Run ASR model");
         self.ctx
             .full(params, &self.audio_data[..])
             .expect("failed to run model");

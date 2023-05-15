@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use actix::{Actor, Addr, Context, Handler, Message, ResponseFuture};
+use actix::{Actor, Addr, Context, Handler, Message, ResponseFuture, ResponseActFuture, WrapFuture, ActorFutureExt};
 use async_openai::types::{
     ChatCompletionRequestMessage,
     ChatCompletionResponseStreamMessage, CreateChatCompletionRequestArgs, Role,
@@ -8,7 +8,7 @@ use async_openai::types::{
 use futures::StreamExt;
 use serde::Deserialize;
 
-use crate::token_processor::{Token, TokenProcessorActor};
+use crate::{token_processor::{Token, TokenProcessorActor}, audio_player::{StatusRequest, Status}};
 
 pub const INITIAL_PROMPT: &str = include_str!("initial_prompt.md");
 
@@ -23,10 +23,10 @@ pub struct LlmActor {
     token_proc: Addr<TokenProcessorActor>,
     client: Arc<async_openai::Client>,
     messages: Vec<ChatCompletionRequestMessage>,
+    idle: bool,
 }
 
 pub struct ChatMessage(pub String, pub Role);
-pub struct ChatMessageFromAssistant(pub String);
 
 impl Actor for LlmActor {
     type Context = Context<Self>;
@@ -36,43 +36,27 @@ impl Message for ChatMessage {
     type Result = Result<(), ()>;
 }
 
-impl Message for ChatMessageFromAssistant {
-    type Result = Result<(), ()>;
-}
-
-impl Handler<ChatMessageFromAssistant> for LlmActor {
-    type Result = Result<(), ()>;
-
-    fn handle(&mut self, msg: ChatMessageFromAssistant, _ctx: &mut Self::Context) -> Self::Result {
-        let message = ChatCompletionRequestMessage {
-            content: msg.0,
-            role: Role::Assistant,
-            name: None,
-        };
-
-        self.messages.push(message);
-
-        Ok(())
-    }
-}
-
 impl Handler<ChatMessage> for LlmActor {
-    type Result = ResponseFuture<Result<(), ()>>;
+    type Result = ResponseActFuture<Self, Result<(), ()>>;
 
     fn handle(&mut self, msg: ChatMessage, _ctx: &mut Self::Context) -> Self::Result {
         println!("LLM         : Received {:?}", msg.0);
 
+        // Prepare the request
         let message = ChatCompletionRequestMessage {
             content: msg.0,
             role: msg.1,
             name: None,
         };
 
+        // Update state
+        self.idle = false;
         self.messages.push(message);
-        let messages = self.messages.clone();
 
+        // Clone the actors for the async task
         let token_proc = self.token_proc.clone();
         let client = self.client.clone();
+        let messages = self.messages.clone();
 
         Box::pin(async move {
             // Set up the request
@@ -85,6 +69,9 @@ impl Handler<ChatMessage> for LlmActor {
 
             // Make the request
             let mut response = client.chat().create_stream(request).await.unwrap();
+            
+            // Create buffer to store the reply
+            let mut content: Vec<String> = Vec::with_capacity(1024);
 
             // Process the stream
             while let Some(result) = response.next().await {
@@ -92,12 +79,21 @@ impl Handler<ChatMessage> for LlmActor {
                 let something = response.choices.pop().unwrap();
 
                 if let Some(token) = something.delta.content {
-                    token_proc.send(Token(token)).await.unwrap();
+                    // Send to the processor
+                    token_proc.send(Token(token.clone())).await.unwrap();
+
+                    // Update the reply buffer
+                    content.push(token);
                 }
             }
 
+            content.into_iter().collect()
+        }.into_actor(self).map(|content, act, _ctx| {
+            // Update the states
+            act.messages.push(ChatCompletionRequestMessage { role: Role::Assistant, content, name: None });
+            act.idle = true;
             Ok(())
-        })
+        }))
     }
 }
 
@@ -108,6 +104,19 @@ impl LlmActor {
             token_proc,
             client: Arc::new(client),
             messages: vec![],
+            idle: true,
+        }
+    }
+}
+
+impl Handler<StatusRequest> for LlmActor {
+    type Result = Result<Status, std::io::Error>;
+
+    fn handle(&mut self, _msg: StatusRequest, _ctx: &mut Context<Self>) -> Self::Result {
+        if self.idle {
+            Ok(Status::Idle)
+        } else {
+            Ok(Status::Busy)
         }
     }
 }

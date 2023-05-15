@@ -86,10 +86,12 @@ async fn main() {
         let tts_status_request = tts.send(StatusRequest).await.unwrap().unwrap();
         let token_proc_status_request = token_proc.send(StatusRequest).await.unwrap().unwrap();
         let interpreter_status_request = interpreter.send(StatusRequest).await.unwrap().unwrap();
+        let llm_status_request = llm.send(StatusRequest).await.unwrap().unwrap();
         if audio_status_request == Status::Idle
             && token_proc_status_request == Status::Idle
             && tts_status_request == Status::Idle
             && interpreter_status_request == Status::Idle
+            && llm_status_request == Status::Idle
         {
             // Check if anything from interpreter
             let observation = interpreter.send(GetObservations).await.unwrap();
