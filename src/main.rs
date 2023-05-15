@@ -21,7 +21,7 @@ use token_processor::TokenProcessorActor;
 use tts_polly::TtsPollyActor;
 use vectordb_qdrant::QdrantStore;
 
-#[actix_rt::main]
+#[tokio::main]
 async fn main() {
     // Tools
     let qdrant_client: Addr<QdrantStore> = QdrantStore::new().await.start();
@@ -46,7 +46,7 @@ async fn main() {
         )
     });
 
-    actix_rt::time::sleep(Duration::from_secs(1)).await;
+    tokio::time::sleep(Duration::from_secs(1)).await;
     
     // Get the ball rolling
     let _ = llm
@@ -57,7 +57,7 @@ async fn main() {
     // Start the turn-based conversation
     loop {
         // Playing safe first
-        actix_rt::time::sleep(Duration::from_secs(2)).await;
+        tokio::time::sleep(Duration::from_secs(2)).await;
 
         // Once the system is stabilised
         // It is my turn when all the audio player is idle.
