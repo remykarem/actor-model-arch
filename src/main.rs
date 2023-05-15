@@ -24,7 +24,7 @@ use vectordb_qdrant::QdrantStore;
 #[actix_rt::main]
 async fn main() {
     // Tools
-    let qdrant_client = QdrantStore::new().await.start();
+    let qdrant_client: Addr<QdrantStore> = QdrantStore::new().await.start();
     let code_writer = CodeWriter.start();
 
     // Interpreter

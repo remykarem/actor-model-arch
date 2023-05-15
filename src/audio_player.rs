@@ -3,15 +3,18 @@ use std::io::Cursor;
 use actix::prelude::*;
 use rodio::{Decoder, OutputStream, OutputStreamHandle, Sink};
 
+#[derive(Message)]
+#[rtype(result = "Result<(), std::io::Error>")]
 pub struct Audio(pub Vec<u8>);
 
-impl Message for Audio {
-    type Result = Result<(), std::io::Error>;
-}
+#[derive(Message)]
+#[rtype(result = "Result<Status, std::io::Error>")]
 pub struct StatusRequest;
 
-impl Message for StatusRequest {
-    type Result = Result<Status, std::io::Error>;
+#[derive(PartialEq)]
+pub enum Status {
+    Idle,
+    Busy,
 }
 
 pub struct AudioPlayerActor {
@@ -53,12 +56,6 @@ impl Handler<Audio> for AudioPlayerActor {
 
         Ok(())
     }
-}
-
-#[derive(PartialEq)]
-pub enum Status {
-    Idle,
-    Busy,
 }
 
 impl Handler<StatusRequest> for AudioPlayerActor {

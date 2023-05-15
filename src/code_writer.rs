@@ -1,13 +1,11 @@
 use actix::prelude::*;
 use tokio::{fs::File, io::AsyncWriteExt};
 
+#[derive(Message)]
+#[rtype(result = "Result<(), ()>")]
 pub struct Code {
     pub filename: String,
     pub content: String,
-}
-
-impl Message for Code {
-    type Result = Result<(), ()>;
 }
 
 pub struct CodeWriter;

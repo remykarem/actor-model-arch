@@ -29,13 +29,12 @@ impl Actor for Stt {
     type Context = SyncContext<Self>;
 }
 
+
+#[derive(Message)]
+#[rtype(result = "Result<(), std::io::Error>")]
 pub enum SttAction {
     RecordUntilSilence,
     Pause,
-}
-
-impl Message for SttAction {
-    type Result = Result<(), std::io::Error>;
 }
 
 impl Handler<SttAction> for Stt {

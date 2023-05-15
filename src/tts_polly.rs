@@ -7,11 +7,9 @@ use polly::{
 
 use crate::audio_player::{Audio, AudioPlayerActor, Status, StatusRequest};
 
-pub struct Sentence(pub String);
-
-impl Message for Sentence {
-    type Result = Result<(), ()>;
-}
+#[derive(Message)]
+#[rtype(result = "Result<(), ()>")]
+pub struct Utterance(pub String);
 
 pub struct TtsPollyActor {
     audio_player: Addr<AudioPlayerActor>,
@@ -36,10 +34,10 @@ impl TtsPollyActor {
     }
 }
 
-impl Handler<Sentence> for TtsPollyActor {
+impl Handler<Utterance> for TtsPollyActor {
     type Result = ResponseFuture<Result<(), ()>>;
 
-    fn handle(&mut self, msg: Sentence, _ctx: &mut Self::Context) -> Self::Result {
+    fn handle(&mut self, msg: Utterance, _ctx: &mut Self::Context) -> Self::Result {
         println!("TTS          : Received {}", msg.0.trim());
 
         let audio_player = self.audio_player.clone();

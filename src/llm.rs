@@ -26,14 +26,12 @@ pub struct LlmActor {
     idle: bool,
 }
 
+#[derive(Message)]
+#[rtype(result = "Result<(), ()>")]
 pub struct ChatMessage(pub String, pub Role);
 
 impl Actor for LlmActor {
     type Context = Context<Self>;
-}
-
-impl Message for ChatMessage {
-    type Result = Result<(), ()>;
 }
 
 impl Handler<ChatMessage> for LlmActor {

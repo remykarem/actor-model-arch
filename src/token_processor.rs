@@ -2,7 +2,7 @@ use actix::prelude::*;
 
 use crate::{
     audio_player::{Status, StatusRequest},
-    tts_polly::Sentence,
+    tts_polly::Utterance,
     tts_polly::TtsPollyActor, interpreter::{Interpreter, Text},
 };
 
@@ -58,7 +58,7 @@ impl Handler<Token> for TokenProcessorActor {
                 self.data_buffer.clear();
                 match dst {
                     Dst::Speech => {
-                        self.tts.do_send(Sentence(data))
+                        self.tts.do_send(Utterance(data))
                     },
                     Dst::Actions => {
                         self.interpreter.do_send(Text(data))

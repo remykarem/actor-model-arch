@@ -7,13 +7,11 @@ use qdrant_client::{
     qdrant::{with_payload_selector::SelectorOptions, PayloadIncludeSelector, WithPayloadSelector},
 };
 
+#[derive(Message)]
+#[rtype(result = "Result<String, ()>")]
 pub struct SearchRequest {
     pub collection_name: String,
     pub vector: Vec<f32>,
-}
-
-impl Message for SearchRequest {
-    type Result = Result<String, ()>;
 }
 
 pub struct QdrantStore {

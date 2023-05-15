@@ -6,11 +6,9 @@ use serde::Serialize;
 
 use crate::audio_player::{Audio, AudioPlayerActor, Status, StatusRequest};
 
-pub struct Sentence(pub String);
-
-impl Message for Sentence {
-    type Result = Result<(), ()>;
-}
+#[derive(Message)]
+#[rtype(result = "Result<(), ()>")]
+pub struct Utterance(pub String);
 
 pub struct TtsActor {
     client: Client,
@@ -46,10 +44,10 @@ impl TtsActor {
     }
 }
 
-impl Handler<Sentence> for TtsActor {
+impl Handler<Utterance> for TtsActor {
     type Result = ResponseFuture<Result<(), ()>>;
 
-    fn handle(&mut self, msg: Sentence, _: &mut Context<Self>) -> Self::Result {
+    fn handle(&mut self, msg: Utterance, _: &mut Context<Self>) -> Self::Result {
         println!("TTS         : Received {}", msg.0);
 
         let text = msg.0;

@@ -22,11 +22,9 @@ pub struct ThoughtActions {
     actions: Vec<Action>,
 }
 
+#[derive(Message)]
+#[rtype(result = "Result<(), ()>")]
 pub struct Text(pub String);
-
-impl Message for Text {
-    type Result = Result<(), ()>;
-}
 
 pub struct Interpreter {
     code_writer: Addr<CodeWriter>,
